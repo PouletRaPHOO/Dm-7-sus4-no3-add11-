@@ -25,7 +25,6 @@ def randomGradient(ix, iy) -> vector2:
     random = 2920.0 * sin(ix * 21942.0 + iy * 171324.0 + 8912.0 + seed) * cos(ix * 23157.0 * seed * iy * 217832.0 + 9758.0)
     return vector2(cos(random), sin(random))
 
-
 # Computes the dot product of the distance and gradient vectors.
 def dotGridGradient(ix, iy, x, y) -> float:
     #Get gradient from integer coordinates
@@ -37,7 +36,6 @@ def dotGridGradient(ix, iy, x, y) -> float:
 
     # Compute the dot-product
     return (dx*gradient.x + dy*gradient.y);
-
 
 #Compute Perlin noise at coordinates x, y
 def perlin(x, y) -> float:
@@ -69,6 +67,9 @@ class Pos :
     def __init__(self,x,y) :
         self.x = x
         self.y = y
+    
+    def __str__(self):
+        return f"({self.x},{self.y})"
 
 #class Case(Pos) : # Classe Cas non utilisée puisque qu'on le stocke sous un Int 
     #def __init__(self,x,y) :
@@ -92,8 +93,6 @@ class Grille :
                 ran = (int((abs(y-click.y))>2 or abs(x-click.x)>2))*randint(0,50)#*perl
                 l = [(ran+1,(-1,-1))] + l
                 i = 0
-                # print((x,y), end="")
-                # print(i<len(l)-1, end="")
                 while i<len(l)-1 and ran<l[i][0]:
                     #print("i ="+str(i))
                     l[i] = l[i+1]
@@ -106,20 +105,24 @@ class Grille :
     
     def discover(self,click:Pos) :
         casea = self.grid[click.y][click.x]
-        neighbours = self.neighbours(click) 
+        neighbours = self.neighbours(click)
+        #for k in neighbours :
+            #print(k,end=" ")
+        #print("==> "+ str(click))
         number = 0
         for k in neighbours :
-            number += self.grid[k.y][k.x] & 2**5
-        self.grid[click.y][click.x] = casea | number
-        self.grid[click.y][click.x] = casea | 2**4
+            number += (self.grid[k.y][k.x] >> 5) & 1
+        #print(number)
+        self.grid[click.y][click.x] |= number
+        self.grid[click.y][click.x] |= 2**4
         if number :
             return 0
         for k in neighbours : 
-            if not(self.grid[k.y][k.x]%2**4):
+            if not(self.grid[k.y][k.x] & 2**4):
                 self.discover(Pos(k.x,k.y))
         return 0
 
-    def click(case:Pos):
+    def click(self,case:Pos):
         casea = grid[case.y][case.x]
         if casea & 2**5 :
             pass # TODO : C'est une bombe casser le jeu
@@ -133,7 +136,7 @@ class Grille :
         for i in range(1,4) :
             for k in range(1,i+1):
                 x+=1 * int((int(not(i%2==0))-0.5) * 2)
-                if 0<x<self.width and 0<y<self.height :
+                if 0<=x<self.width and 0<=y<self.height :
                     L.append(Pos(x,y))
             for l in range(1,i+1):
                 y+= 1 * int((int(i%2==0)-0.5) * 2)
@@ -146,14 +149,15 @@ class Grille :
         a = ""
         for x in range(len(self.grid)) :
             for y in range(len(self.grid[x])) :
-                print((x,y))
-                if self.grid[x][y] & 2**5 :
+                if self.grid[y][x] & 2**5 :
                     a+="b "
                 elif self.grid[x][y] & 2**4:
-                    a+= str(self.grid[x][y] & 15)+" "
+                    a+= str(self.grid[y][x] & 15)+" "
+                    print(f"{str(x)}a{str(y)}b{str(self.grid[y][x])} ")
                 else :
                     self.discover(Pos(x,y))  # A retirer si on veut pas se faire spoil la grid c'est uniquement pour le debug
-                    a+= str(self.grid[x][y] & 15)+" "
+                    a+= str(self.grid[y][x] & 15)+" "
+                    print(f"{str(x)}a{str(y)}b{str(self.grid[y][x])} ")
                     #a+="* "
             a+="\n"
         return a
