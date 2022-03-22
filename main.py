@@ -1,5 +1,6 @@
 from math import cos,sin,floor
 from random import randint,uniform
+seed = uniform(-65536, 65535)
 
 # Function to linearly interpolate between a0 and a1
 # Weight w should be in the range [0.0, 1.0]
@@ -20,7 +21,6 @@ class vector2(object):
 
 #Create pseudorandom direction vector
 def randomGradient(ix, iy) -> vector2:
-    seed = uniform(-65536, 65535)
     # No precomputed gradients mean this works for any number of grid coordinates
     random = 2920.0 * sin(ix * 21942.0 + iy * 171324.0 + 8912.0 + seed) * cos(ix * 23157.0 * seed * iy * 217832.0 + 9758.0)
     return vector2(cos(random), sin(random))
@@ -88,17 +88,21 @@ class Grille :
         l = []
         for y in range(len(self.grid)) :
             for x in range(len(self.grid[y])) :
-                ran = int(abs(y-click.y)>2 or abs(x-click.x)>2)*randint(0,50)*perlin(x,y)
-                l = [(float('inf'),(-1,-1))] + l
+                perl = perlin(x,y)
+                ran = (int((abs(y-click.y))>2 or abs(x-click.x)>2))*randint(0,50)#*perl
+                l = [(ran+1,(-1,-1))] + l
                 i = 0
+                # print((x,y), end="")
+                # print(i<len(l)-1, end="")
                 while i<len(l)-1 and ran<l[i][0]:
+                    #print("i ="+str(i))
                     l[i] = l[i+1]
                     i+=1
-                l[i] = (ran,(x,y))
-
+                l[i-1] = (ran,(x,y))
+        #print(l)
         for k in l[:b_num] :
             #self.grid[k[1][1]][k[1][0]].isBomb = True
-            self.grid[k[1][1]][k[1][0]] | 2**5 #Si on stocke la case sous la forme d'un int
+            self.grid[k[1][1]][k[1][0]] = self.grid[k[1][1]][k[1][0]] | 2**5 #Si on stocke la case sous la forme d'un int
     
     def discover(self,click:Pos) :
         casea = self.grid[click.y][click.x]
@@ -140,20 +144,22 @@ class Grille :
 
     def __str__(self) :
         a = ""
-        for k in range(len(self.grid)) :
-            for j in range(len(self.grid[k])) :
-                if self.grid[k][j] & 2**5 :
+        for x in range(len(self.grid)) :
+            for y in range(len(self.grid[x])) :
+                print((x,y))
+                if self.grid[x][y] & 2**5 :
                     a+="b "
-                elif self.grid[k][j] & 2**4:
-                    a+= str(self.grid[k][j] & 15)+" "
+                elif self.grid[x][y] & 2**4:
+                    a+= str(self.grid[x][y] & 15)+" "
                 else :
-                    #self.discover(Pos(j,k))  # A retirer si on veut pas se faire spoil la grid c'est uniquement pour le debug
-                    a+="* "
+                    self.discover(Pos(x,y))  # A retirer si on veut pas se faire spoil la grid c'est uniquement pour le debug
+                    a+= str(self.grid[x][y] & 15)+" "
+                    #a+="* "
             a+="\n"
         return a
 
-grid = Grille(20,20)
-grid.peuplade(Pos(5,5),20)
+grid = Grille(5,5)
+grid.peuplade(Pos(5,5),5)
 print(grid)
 
 
