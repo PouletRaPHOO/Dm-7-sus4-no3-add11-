@@ -1,5 +1,5 @@
-import math
-import random
+from math import cos,sin,floor
+from random import randint,uniform
 
 # Function to linearly interpolate between a0 and a1
 # Weight w should be in the range [0.0, 1.0]
@@ -14,25 +14,16 @@ def interpolate(a0, a1, w) :
     return (a1 - a0) * w + a0
     
 class vector2(object):
-    __slots__ = ['x', 'y']
+    def __init__(self,x,y) :
+        self.x =x
+        self.y =y
 
 #Create pseudorandom direction vector
 def randomGradient(ix, iy) -> vector2:
+    seed = uniform(-65536, 65535)
     # No precomputed gradients mean this works for any number of grid coordinates
-    w = 8 * sizeof(unsigned);
-    s = w / 2; # rotation width
-    a = ix
-    b = iy
-    a *= 3284157443
-    b ^= a << s | a >> w-s
-    b *= 1911520717
-    a ^= b << s | b >> w-s
-    a *= 2048419325
-    ran = a * (3.14159265 / ~ ( ~ 0 >> 1)) # in [0, 2*Pi]
-    v =vector2()
-    v.x = math.cos(ran)
-    v.y = math.sin(ran)
-    return v;
+    random = 2920.0 * sin(ix * 21942.0 + iy * 171324.0 + 8912.0 + seed) * cos(ix * 23157.0 * seed * iy * 217832.0 + 9758.0)
+    return vector2(cos(random), sin(random))
 
 
 # Computes the dot product of the distance and gradient vectors.
@@ -51,9 +42,9 @@ def dotGridGradient(ix, iy, x, y) -> float:
 #Compute Perlin noise at coordinates x, y
 def perlin(x, y) -> float:
     # Determine grid cell coordinates
-    x0 = math.floor(x)
+    x0 = floor(x)
     x1 = x0 + 1
-    y0 = math.floor(y)
+    y0 = floor(y)
     y1 = y0 + 1
 
     # Determine interpolation weights
@@ -79,44 +70,93 @@ class Pos :
         self.x = x
         self.y = y
 
-class Case(Pos) :
-    def __init__(self,x,y) :
-        super().__init__(x,y)
-        self.visible = False
-        self.isBomb = False
-        self.neighbours = -1
+#class Case(Pos) : # Classe Cas non utilisée puisque qu'on le stocke sous un Int 
+    #def __init__(self,x,y) :
+    #super().__init__(x,y)
+    #self.visible = False
+    #self.isBomb = False
+    #self.neighbours = -1
 
 
 class Grille :
     def __init__(self,width:int,height:int) :
-        self.grid = [[Case(k,i)for k in range(width)]for i in range(height)]
+        self.grid = [[0 for k in range(width)]for i in range(height)]
         self.height = height
         self.width = width
 
     def peuplade(self,click:Pos,b_num:int) :
         l = []
-        for ligne in self.grid :
-            for j in ligne :
-                ran = int(abs(j.y-click.y)>2 or abs(j.x-click.x)>2)*random.randint(0,50)*perlin(j.x,j.y)
+        for y in range(len(self.grid)) :
+            for x in range(len(self.grid[y])) :
+                ran = int(abs(y-click.y)>2 or abs(x-click.x)>2)*randint(0,50)*perlin(x,y)
+                l = [(float('inf'),(-1,-1))] + l
                 i = 0
-                while i<len(l) and ran<l[i]:
-                    pass # Inserer le nombre dans la liste flemme un peu la
-        for k in l[0:b_num] :
-            self.grid[k[1][1]][k[1][0]].isBomb = True
-            #self.grid[k[1][1]][k[1][0]] += 1 Si on stocke la case sous la forme d'un int
+                while i<len(l)-1 and ran<l[i][0]:
+                    l[i] = l[i+1]
+                    i+=1
+                l[i] = (ran,(x,y))
+
+        for k in l[:b_num] :
+            #self.grid[k[1][1]][k[1][0]].isBomb = True
+            self.grid[k[1][1]][k[1][0]] | 2**5 #Si on stocke la case sous la forme d'un int
     
     def discover(self,click:Pos) :
-        case = self.grid[click.y][click.x]
-        if case.neighbours > 0 :
-            case.visible = True
-            # case += 2
-        else :
-            x = click.x
-            y = click.y
-            for k in range(1,9) : #Regarder les cases autour
-                discover
+        casea = self.grid[click.y][click.x]
+        neighbours = self.neighbours(click) 
+        number = 0
+        for k in neighbours :
+            number += self.grid[k.y][k.x] & 2**5
+        self.grid[click.y][click.x] = casea | number
+        self.grid[click.y][click.x] = casea | 2**4
+        if number :
+            return 0
+        for k in neighbours : 
+            if not(self.grid[k.y][k.x]%2**4):
+                self.discover(Pos(k.x,k.y))
+        return 0
 
-    def calculate(case:Pos):
+    def click(case:Pos):
+        casea = grid[case.y][case.x]
+        if casea & 2**5 :
+            pass # TODO : C'est une bombe casser le jeu
+        else :
+            self.discover(case)
+
+    def neighbours(self, case:Pos)-> list : #TODO : Trouver les voisins 
+        L = []
+        x = case.x
+        y = case.y
+        for i in range(1,4) :
+            for k in range(1,i+1):
+                x+=1 * int((int(not(i%2==0))-0.5) * 2)
+                if 0<x<self.width and 0<y<self.height :
+                    L.append(Pos(x,y))
+            for l in range(1,i+1):
+                y+= 1 * int((int(i%2==0)-0.5) * 2)
+                if 0<x<self.width and 0<y<self.height :
+                    L.append(Pos(x,y))
+        return L
+                
+
+    def __str__(self) :
+        a = ""
+        for k in range(len(self.grid)) :
+            for j in range(len(self.grid[k])) :
+                if self.grid[k][j] & 2**5 :
+                    a+="b "
+                elif self.grid[k][j] & 2**4:
+                    a+= str(self.grid[k][j] & 15)+" "
+                else :
+                    #self.discover(Pos(j,k))  # A retirer si on veut pas se faire spoil la grid c'est uniquement pour le debug
+                    a+="* "
+            a+="\n"
+        return a
+
+grid = Grille(20,20)
+grid.peuplade(Pos(5,5),20)
+print(grid)
+
+
         
 
 
