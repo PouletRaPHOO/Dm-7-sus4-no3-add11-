@@ -84,6 +84,7 @@ class Grille :
         self.grid = [[0 for k in range(width)]for i in range(height)]
         self.height = height
         self.width = width
+        self.discovered = False
 
     def peuplade(self,click:Pos,b_num:int) :
         l = []
@@ -94,77 +95,114 @@ class Grille :
                 l = [(ran+1,(-1,-1))] + l
                 i = 0
                 while i<len(l)-1 and ran<l[i][0]:
-                    #print("i ="+str(i))
                     l[i] = l[i+1]
                     i+=1
                 l[i-1] = (ran,(x,y))
-        #print(l)
         for k in l[:b_num] :
-            #self.grid[k[1][1]][k[1][0]].isBomb = True
             self.grid[k[1][1]][k[1][0]] = self.grid[k[1][1]][k[1][0]] | 2**5 #Si on stocke la case sous la forme d'un int
     
     def discover(self,click:Pos) :
         casea = self.grid[click.y][click.x]
         neighbours = self.neighbours(click)
-        #for k in neighbours :
-            #print(k,end=" ")
-        #print("==> "+ str(click))
         number = 0
         for k in neighbours :
-            number += (self.grid[k.y][k.x] >> 5) & 1
-        #print(number)
+            number += (self.grid[k.y][k.x] >> 5)
         self.grid[click.y][click.x] |= number
         self.grid[click.y][click.x] |= 2**4
         if number :
             return 0
         for k in neighbours : 
             if not(self.grid[k.y][k.x] & 2**4):
-                self.discover(Pos(k.x,k.y))
+                self.discover(k)
         return 0
 
     def click(self,case:Pos):
-        casea = grid[case.y][case.x]
+        casea = self.grid[case.y][case.x]
         if casea & 2**5 :
-            pass # TODO : C'est une bombe casser le jeu
+            return 0
         else :
             self.discover(case)
+            return 1
 
-    def neighbours(self, case:Pos)-> list : #TODO : Trouver les voisins 
+    def neighbours(self, case:Pos)-> list :
         L = []
         x = case.x
         y = case.y
-        for i in range(1,4) :
-            for k in range(1,i+1):
-                x+=1 * int((int(not(i%2==0))-0.5) * 2)
-                if 0<=x<self.width and 0<=y<self.height :
-                    L.append(Pos(x,y))
-            for l in range(1,i+1):
-                y+= 1 * int((int(i%2==0)-0.5) * 2)
-                if 0<x<self.width and 0<y<self.height :
-                    L.append(Pos(x,y))
+        for y1 in range(y-1,y+2) :
+            for x1 in range(x-1,x+2) :
+                if not(y1==y and x1==x) and 0<=x1<self.width and 0<=y1<self.height:
+                    L.append(Pos(x1,y1))
         return L
                 
-
     def __str__(self) :
         a = ""
-        for x in range(len(self.grid)) :
-            for y in range(len(self.grid[x])) :
-                if self.grid[y][x] & 2**5 :
-                    a+="b "
-                elif self.grid[x][y] & 2**4:
+        for y in range(len(self.grid)) :
+            for x in range(len(self.grid[y])) :
+                if self.grid[y][x] & 2**4:
                     a+= str(self.grid[y][x] & 15)+" "
-                    print(f"{str(x)}a{str(y)}b{str(self.grid[y][x])} ")
+                elif self.discovered and self.grid[y][x] & 2**5 :
+                    a+= "b "
                 else :
-                    self.discover(Pos(x,y))  # A retirer si on veut pas se faire spoil la grid c'est uniquement pour le debug
-                    a+= str(self.grid[y][x] & 15)+" "
-                    print(f"{str(x)}a{str(y)}b{str(self.grid[y][x])} ")
-                    #a+="* "
+                    a+="* "
             a+="\n"
         return a
 
-grid = Grille(5,5)
-grid.peuplade(Pos(5,5),5)
-print(grid)
+    def reset(self,height,width) :
+        self.height = height
+        self.width = width
+        self.grid = [[0 for k in range(width)]for i in range(height)]
+        self.discovered = False
+
+class Game :
+    def __init__(self,name) :
+        self.name = name
+        self.grid = Grille(0,0)
+        self.loose = 0
+        self.wins = 0
+        self.playing = False
+
+    def launchGame(self):
+        w = int(input("Entrez la largeur de la grille :"))
+        h = int(input("Entrez la hauteur de la grille :"))
+        n_b = int(input("Entrez le nombre de bombes voulues :"))
+        while (n_b>(h*w)/2) :
+            n_b = int(input("Nombre trop élevé entrez le nouveau nombre de bombes :"))
+        self.grid.reset(w,h)
+        self.playing = True
+        self.play(n_b)
+
+    def check_victory(self) :
+        pass
+
+    def play(self,n_b) :
+        print(self.grid)
+        click = input("Entrez la case à cliquer (x y):").split()
+        pos = Pos(int(click[0])-1,int(click[1])-1)
+        self.grid.peuplade(pos,n_b)
+        self.grid.click(pos)
+        print(self.grid)
+        while self.playing :
+            click = input("Entrez la case à cliquer (x y):").split()
+            pos = Pos(int(click[0])-1,int(click[1])-1)
+            if not(self.grid.click(pos)) :
+                self.playing = False
+                self.loose +=1
+                self.grid.discovered = True
+                print(self.grid)
+                print("Vous avez appuyé sur une bombe ! Fin de Partie !")
+            else :
+                print(self.grid)
+        again = input("Voulez vous Rejouer ? (O/N)")
+        if again == "O" :
+            print("Rechargement de la partie")
+            self.launchGame()
+        elif again == "N" :
+            return 0
+        else :
+            again = input("Mauvaise entrée. Voulez vous Rejouer ? (O/N)")
+
+game = Game(input("Entrez votre nom :"))
+game.launchGame()
 
 
         
