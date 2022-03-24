@@ -1,3 +1,6 @@
+
+
+
 from math import cos,sin,floor
 from random import randint,uniform
 seed = uniform(-65536, 65535)
@@ -78,6 +81,7 @@ class Pos :
     #self.isBomb = False
     #self.neighbours = -1
 
+
 class Grille :
     def __init__(self,width:int,height:int) :
         self.grid = [[0 for k in range(width)]for i in range(height)]
@@ -90,7 +94,7 @@ class Grille :
         for y in range(len(self.grid)) :
             for x in range(len(self.grid[y])) :
                 perl = perlin(x,y)
-                ran = (int((abs(y-click.y))>2 or abs(x-click.x)>2))*randint(0,50)#*perl
+                ran = (int((abs(y-click.y))>(2*(self.width//15)) or abs(x-click.x)>(2*(self.width//15))))*randint(0,50)#*perl
                 l = [(ran+1,(-1,-1))] + l
                 i = 0
                 while i<len(l)-1 and ran<l[i][0]:
@@ -208,7 +212,7 @@ class Game :
     def launchGame(self):
         w = int(input("Entrez la largeur de la grille :"))
         h = int(input("Entrez la hauteur de la grille :"))
-        n_b = int(input("Entrez le nombre de bombes voulues :"))
+        n_b = int(input(f"Entrez le nombre de bombes voulues ({int((w*h)/6)} conseillées) :"))
         while (n_b>(h*w)/2) :
             n_b = int(input("Nombre trop élevé entrez le nouveau nombre de bombes :"))
         self.grid.reset(w,h)
@@ -257,13 +261,3 @@ class Game :
 
 game = Game(input("Entrez votre nom :"))
 game.launchGame()
-
-
-        
-
-
-
-
-
-
-        
