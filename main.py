@@ -78,7 +78,6 @@ class Pos :
     #self.isBomb = False
     #self.neighbours = -1
 
-
 class Grille :
     def __init__(self,width:int,height:int) :
         self.grid = [[0 for k in range(width)]for i in range(height)]
@@ -106,9 +105,12 @@ class Grille :
         neighbours = self.neighbours(click)
         number = 0
         for k in neighbours :
-            number += (self.grid[k.y][k.x] >> 5)
-        self.grid[click.y][click.x] |= number
-        self.grid[click.y][click.x] |= 2**4
+            number += (self.grid[k.y][k.x] >> 5) & 1
+        casea >>= 4
+        casea <<= 4 
+        casea |= number
+        casea |= 2**4
+        self.grid[click.y][click.x] = casea
         if number :
             return 0
         for k in neighbours : 
@@ -116,12 +118,24 @@ class Grille :
                 self.discover(k)
         return 0
 
-    def click(self,case:Pos):
+    def click(self,case:Pos,flag:bool):
         casea = self.grid[case.y][case.x]
-        if casea & 2**5 :
-            return 0
+        if not flag :
+            if casea & 2**6 :
+                print("Vous avez placé un drapeau sur cette case. Drapeau retiré veuillez confirmer")
+                self.grid[case.y][case.x] &= (2**6)-1
+            elif casea & 2**5 :
+                return 0
+            elif casea & 2**4:
+                print("Vous avez déja découvert cette case")
+            else :
+                self.discover(case)
+            return 1
         else :
-            self.discover(case)
+            if casea & 2**4 :
+                print("Vous avez déja découvert cette case")
+            else :
+                self.grid[case.y][case.x] |= 2**6
             return 1
 
     def neighbours(self, case:Pos)-> list :
@@ -135,15 +149,35 @@ class Grille :
         return L
                 
     def __str__(self) :
-        a = ""
+        a = "  |"
+        for k in range(1,self.width+1) :
+            if k<10:
+                a+=str(k)+" "
+            else :
+                a+=str(k)
+        a+="\n"
         for y in range(len(self.grid)) :
+            a+= str(y+1)+(" "*(y<9))+"|"
             for x in range(len(self.grid[y])) :
-                if self.grid[y][x] & 2**4:
-                    a+= str(self.grid[y][x] & 15)+" "
-                elif self.discovered and self.grid[y][x] & 2**5 :
-                    a+= "b "
+                if self.discovered :
+                    if self.grid[y][x] & 2**6 :
+                        if self.grid[y][x] & 2**5 :
+                            a+= "🏳"
+                        else :
+                            a+="🚩"
+                    elif self.grid[y][x] & 2**5 :
+                        a+= "💣"
+                    elif self.grid[y][x] & 2**4:
+                        a+= str(self.grid[y][x] & 15)+" "
+                    else :
+                        a+="■ "
                 else :
-                    a+="* "
+                    if self.grid[y][x] & 2**6 :
+                        a+= "🏁"
+                    elif self.grid[y][x] & 2**4:
+                        a+= str(self.grid[y][x] & 15)+" "
+                    else :
+                        a+="■ "
             a+="\n"
         return a
 
@@ -152,6 +186,16 @@ class Grille :
         self.width = width
         self.grid = [[0 for k in range(width)]for i in range(height)]
         self.discovered = False
+
+    def check_discovered(self, n_b):
+        number = 0
+        for y in range(len(self.grid)) :
+            for x in range(len(self.grid[y])) :
+                number += not(self.grid[y][x] & 2**4)
+                if number>n_b :
+                    return False
+        return True
+
 
 class Game :
     def __init__(self,name) :
@@ -179,19 +223,29 @@ class Game :
         click = input("Entrez la case à cliquer (x y):").split()
         pos = Pos(int(click[0])-1,int(click[1])-1)
         self.grid.peuplade(pos,n_b)
-        self.grid.click(pos)
+        self.grid.click(pos, len(click)>2)
         print(self.grid)
         while self.playing :
             click = input("Entrez la case à cliquer (x y):").split()
             pos = Pos(int(click[0])-1,int(click[1])-1)
-            if not(self.grid.click(pos)) :
+            if not(self.grid.click(pos, len(click)>2)) :
                 self.playing = False
                 self.loose +=1
                 self.grid.discovered = True
                 print(self.grid)
                 print("Vous avez appuyé sur une bombe ! Fin de Partie !")
+                print(f"{self.name} a gagné {self.wins} parties, et perdu {self.loose} parties !")
             else :
-                print(self.grid)
+                if self.grid.check_discovered(n_b):
+                    self.playing = False
+                    self.wins +=1
+                    self.grid.discovered = True
+                    print(self.grid)
+                    print("Vous avez fini la grille, vous avez gagné ! Fin de Partie !")
+                    print(f"{self.name} a gagné {self.wins} parties, et perdu {self.loose} parties !")
+                else :
+                    print(self.grid)
+
         again = input("Voulez vous Rejouer ? (O/N)")
         if again == "O" :
             print("Rechargement de la partie")
