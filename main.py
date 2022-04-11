@@ -123,7 +123,8 @@ class Grille :
         return 0
 
     def click(self,case:Pos,flag:bool):
-        casea = self.grid[case.y%(self.height+1)][case.x%(self.width+1)]
+        click = Pos(case.x%(self.width+1),case.y%(self.height+1))
+        casea = self.grid[click.y][click.x]
         if not flag :
             if casea & 2**6 :
                 print("Vous avez placé un drapeau sur cette case. Drapeau retiré veuillez confirmer")
@@ -133,13 +134,13 @@ class Grille :
             elif casea & 2**4:
                 print("Vous avez déja découvert cette case")
             else :
-                self.discover(casea)
+                self.discover(click)
             return 1
         else :
             if casea & 2**4 :
                 print("Vous avez déja découvert cette case")
             else :
-                self.grid[casea.y][casea.x] |= 2**6
+                self.grid[click.y][click.x] |= 2**6
             return 1
 
     def neighbours(self, case:Pos)-> list :
